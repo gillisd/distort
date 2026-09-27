@@ -29,7 +29,7 @@ static const char doc[] =
     "\n"
     "Make a key:  head -c 32 /dev/urandom > key.key\n"
     "\n"
-    "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on a usage error.";
+    "Exit status is 0 on success, 1 on failure, 64 on a usage error.";
 
 static const char args_doc[] = "-k FILE {encrypt|decrypt} [FILE]";
 

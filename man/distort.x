@@ -33,7 +33,7 @@ chmod 600 key.key
 .fi
 
 [EXIT STATUS]
-0 on success, 1 on failure or a damaged stream, 64 on a usage error.
+Exit status is 0 on success, 1 on failure, 64 on a usage error.
 
 [SEE ALSO]
 .BR age (1),

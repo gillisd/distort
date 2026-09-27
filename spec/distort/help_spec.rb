@@ -49,7 +49,7 @@ RSpec.describe "distort help and usage" do
     end
 
     it "documents the exit status" do
-      expect(result.stdout).to match(/^Exit status: 0 on success, 1 on failure or a damaged stream,\s+64 on a\s+usage\s+error\.$/)
+      expect(result.stdout).to include("\nExit status is 0 on success, 1 on failure, 64 on a usage error.\n")
     end
   end
 

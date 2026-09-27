@@ -44,8 +44,7 @@ decrypt writes each chunk only after verifying it.  If it fails, the output
 so far is authentic but incomplete: trust the data only when the exit
 status is 0.  See distort --help and man distort.
 
-Exit status: 0 on success, 1 on failure or a damaged stream, 64 on a usage
-error.
+Exit status is 0 on success, 1 on failure, 64 on a usage error.
 
 License
 =======
