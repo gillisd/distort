@@ -55,8 +55,8 @@ RSpec.describe "distort input sources" do
 
       let(:missing) { File.join(workdir, "nope.bin") }
 
-      it "fails" do
-        expect(result).not_to be_success
+      it "exits with status 1" do
+        expect(result.exitstatus).to eq(1)
       end
 
       it "names the file on stderr" do

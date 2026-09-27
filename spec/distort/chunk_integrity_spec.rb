@@ -26,8 +26,8 @@ RSpec.describe "distort chunk integrity" do
         context "when the stream is truncated exactly before chunk #{index}" do
           subject(:result) { decrypt(ciphertext.byteslice(0, geometry.offset(index))) }
 
-          it "fails" do
-            expect(result).not_to be_success
+          it "exits with status 1" do
+            expect(result.exitstatus).to eq(1)
           end
 
           it "reports that the stream ended early rather than blaming authentication" do
@@ -40,21 +40,21 @@ RSpec.describe "distort chunk integrity" do
         context "when chunks #{first} and #{second} are swapped" do
           it "fails" do
             swapped = chunks.dup.tap { |list| list[first], list[second] = list[second], list[first] }
-            expect(decrypt(reassembled(header, swapped))).not_to be_success
+            expect(decrypt(reassembled(header, swapped)).exitstatus).to eq(1)
           end
         end
       end
 
       [1, 2].each do |index|
         context "when middle chunk #{index} is dropped" do
-          it "fails" do
-            expect(decrypt(reassembled(header, chunks.reject.with_index { |_, i| i == index }))).not_to be_success
+          it "exits with status 1" do
+            expect(decrypt(reassembled(header, chunks.reject.with_index { |_, i| i == index })).exitstatus).to eq(1)
           end
         end
 
         context "when chunk #{index} is duplicated" do
-          it "fails" do
-            expect(decrypt(reassembled(header, chunks.dup.insert(index, chunks[index])))).not_to be_success
+          it "exits with status 1" do
+            expect(decrypt(reassembled(header, chunks.dup.insert(index, chunks[index]))).exitstatus).to eq(1)
           end
         end
       end
@@ -66,12 +66,28 @@ RSpec.describe "distort chunk integrity" do
         [0, 1, 3].each do |index|
           it "rejects chunk #{index} taken from the other stream" do
             spliced = chunks.dup.tap { |list| list[index] = other_chunks[index] }
-            expect(decrypt(reassembled(header, spliced))).not_to be_success
+            expect(decrypt(reassembled(header, spliced)).exitstatus).to eq(1)
           end
         end
 
         it "rejects the other stream's header in front of these chunks" do
-          expect(decrypt(reassembled(geometry.header_of(other), chunks))).not_to be_success
+          expect(decrypt(reassembled(geometry.header_of(other), chunks)).exitstatus).to eq(1)
+        end
+      end
+
+      [1, 2].each do |count|
+        [1, 100].each do |junk|
+          context "when #{junk}-byte junk follows a stream of exactly #{count} whole chunk#{"s" if count > 1}" do
+            subject(:result) { decrypt(ciphertext_of(random_bytes(count * geometry.chunk), option) + random_bytes(junk)) }
+
+            it "exits with status 1" do
+              expect(result.exitstatus).to eq(1)
+            end
+
+            it "reports data after the end of the stream" do
+              expect(result.stderr).to match(/data after the end of the stream/i)
+            end
+          end
         end
       end
 

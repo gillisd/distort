@@ -6,6 +6,16 @@ module DistortHelpers
     capture("distort", *args, stdin:)
   end
 
+  def distort_executable
+    ENV.fetch("PATH").split(File::PATH_SEPARATOR)
+       .map { |dir| File.expand_path("distort", dir) }
+       .find { |path| File.file?(path) && File.executable?(path) }
+  end
+
+  def fixture(name)
+    File.expand_path(File.join("..", "fixtures", name), __dir__)
+  end
+
   def encrypt(plaintext, *options, key: key_path)
     distort("encrypt", "--key-file=#{key}", *options, stdin: plaintext)
   end
@@ -23,8 +33,8 @@ module DistortHelpers
     ["sh", "-c", %(exec "$@" #{operator} "$0"), path, *command]
   end
 
-  def ciphertext_of(plaintext, *options)
-    encrypt(plaintext, *options).stdout
+  def ciphertext_of(plaintext, *options, key: key_path)
+    encrypt(plaintext, *options, key:).stdout
   end
 
   def write_file(name, bytes)

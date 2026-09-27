@@ -1,23 +1,26 @@
 distort — encrypt or decrypt a stream with authenticated encryption
 
-distort seals a stream of any length with XChaCha20-Poly1305 (libsodium's
-crypto_secretstream) in 64 KiB chunks, so memory use is constant.  Every
-chunk is authenticated: decryption fails if the stream was reordered,
-truncated, extended or sealed with another key.
+distort seals a stream of any length with chacha20-poly1305 (libsodium's
+secretstream) in 64 KiB chunks, so memory use is constant.  Every chunk is
+authenticated: decryption fails if the stream was reordered, truncated,
+extended or sealed with another key.
 
 Building and installing
 =======================
 
-distort needs a C compiler and libsodium (Alpine: libsodium-dev;
-Debian: libsodium-dev; Fedora: libsodium-devel; macOS: brew install libsodium).
-From a release tarball:
+distort needs a C compiler, pkg-config and libsodium (Alpine: pkgconf and
+libsodium-dev; Debian: pkg-config and libsodium-dev; Fedora: pkgconf and
+libsodium-devel; macOS: brew install pkg-config libsodium).  From a release
+tarball:
 
     ./configure
     make
     make check          # optional
     sudo make install
 
-For a self-contained binary: ./configure --enable-static-binary (fully static on Linux; libsodium linked in statically on macOS).
+For a self-contained binary, run ./configure --enable-static-binary: the
+binary is fully static on Linux (Alpine also needs libsodium-static), and on
+macOS libsodium is linked in statically.
 
 From a source checkout, run ./bootstrap first (needs autoconf, automake,
 help2man and git).  See ./configure --help for the usual options such as
@@ -33,8 +36,8 @@ Make a key: 32 random bytes, stored raw (or as 64 hex digits).
 
 Encrypt and decrypt files or pipes:
 
-    distort encrypt --key-file key.key file.bin > file.bin.enc
-    distort decrypt --key-file key.key file.bin.enc > file.bin
+    distort encrypt -k key.key file.bin > file.bin.enc
+    distort decrypt -k key.key file.bin.enc > file.bin
     tar cz dir | distort encrypt -k key.key > dir.tgz.enc
 
 decrypt writes each chunk only after verifying it.  If it fails, the output

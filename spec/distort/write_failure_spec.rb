@@ -18,8 +18,8 @@ RSpec.describe "distort when stdout cannot be written", :dev_full do
                     stdin: instance_exec(plaintext, &input_for))
           end
 
-          it "fails" do
-            expect(result).not_to be_success
+          it "exits with status 1" do
+            expect(result.exitstatus).to eq(1)
           end
 
           it "explains the problem on stderr" do

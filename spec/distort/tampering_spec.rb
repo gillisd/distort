@@ -7,8 +7,8 @@ RSpec.describe "distort decrypt of untrustworthy input" do
       context "when the wrong key is used" do
         subject(:result) { decrypt(ciphertext, key: other_key_path) }
 
-        it "fails" do
-          expect(result).not_to be_success
+        it "exits with status 1" do
+          expect(result.exitstatus).to eq(1)
         end
 
         it "releases no plaintext" do
@@ -23,8 +23,8 @@ RSpec.describe "distort decrypt of untrustworthy input" do
       context "when the first byte is altered" do
         subject(:result) { decrypt(flip_byte(ciphertext, 0)) }
 
-        it "fails" do
-          expect(result).not_to be_success
+        it "exits with status 1" do
+          expect(result.exitstatus).to eq(1)
         end
 
         it "releases no plaintext" do
@@ -43,8 +43,8 @@ RSpec.describe "distort decrypt of untrustworthy input" do
         context "when #{description}" do
           subject(:result) { decrypt(instance_exec(ciphertext, &corrupt)) }
 
-          it "fails" do
-            expect(result).not_to be_success
+          it "exits with status 1" do
+            expect(result.exitstatus).to eq(1)
           end
 
           it "explains the failure on stderr" do
@@ -72,16 +72,16 @@ RSpec.describe "distort decrypt of untrustworthy input" do
   end
 
   context "when stdin is empty" do
-    it "fails" do
-      expect(decrypt("")).not_to be_success
+    it "exits with status 1" do
+      expect(decrypt("").exitstatus).to eq(1)
     end
   end
 
   context "when stdin is random noise" do
     subject(:result) { decrypt(random_bytes(4096)) }
 
-    it "fails" do
-      expect(result).not_to be_success
+    it "exits with status 1" do
+      expect(result.exitstatus).to eq(1)
     end
 
     it "releases no plaintext" do
@@ -90,8 +90,8 @@ RSpec.describe "distort decrypt of untrustworthy input" do
   end
 
   context "when stdin is plaintext" do
-    it "fails" do
-      expect(decrypt("hello, world\n" * 100)).not_to be_success
+    it "exits with status 1" do
+      expect(decrypt("hello, world\n" * 100).exitstatus).to eq(1)
     end
   end
 end

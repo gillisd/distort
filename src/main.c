@@ -11,29 +11,32 @@
 
 #include "distort.h"
 
-const char *argp_program_version = PACKAGE_STRING;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 static const char doc[] =
     "Encrypt or decrypt a stream with authenticated encryption."
     "\v"
-    "Reads FILE, or standard input when FILE is absent or -, and writes to standard "
-    "output. Data is processed in 64 KiB chunks, so memory use is constant.\n"
+    "With no FILE, or when FILE is -, read standard input.  Write to standard output.\n"
     "\n"
-    "The cipher is XChaCha20-Poly1305, via libsodium's crypto_secretstream; "
-    "chacha20-poly1305 is the only CIPHER.\n"
+    "Examples:\n"
+    "  tar cz dir | distort encrypt -k key.key > dir.tgz.enc\n"
+    "  distort decrypt -k key.key < dir.tgz.enc | tar xz\n"
+    "  distort encrypt -k key.key notes.txt > notes.txt.enc\n"
     "\n"
-    "The key file holds 32 random bytes, raw or as 64 hex digits; make one with\n"
-    "  head -c 32 /dev/urandom > key.key\n"
+    "Make a key:  head -c 32 /dev/urandom > key.key\n"
     "\n"
-    "Exit status is 0 on success, 1 on failure (including authentication "
-    "failure), and 64 on a usage error.";
+    "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on misuse.";
 
 static const char args_doc[] = "encrypt [FILE]\ndecrypt [FILE]";
 
+enum { OPT_USAGE = 256 };
+
 static const struct argp_option options[] = {
-    { "key-file", 'k', "FILE", 0, "Read the 32-byte key from FILE (required)", 0 },
-    { "cipher", 'c', "CIPHER", 0, "Only chacha20-poly1305, the default", 0 },
+    { "key-file", 'k', "FILE", 0, "read the 32-byte key (raw or hex) from FILE", 0 },
+    { "cipher", 'c', "NAME", 0, "cipher to use; chacha20-poly1305 is the only one", 0 },
+    { "help", 'h', nullptr, 0, "give this help list", -1 },
+    { "usage", OPT_USAGE, nullptr, 0, "give a short usage message", -1 },
+    { "version", 'V', nullptr, 0, "print program version", -1 },
     {},
 };
 
@@ -50,6 +53,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     struct args *a = state->input;
 
     switch (key) {
+    case 'h':
+        argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+        break;
+    case OPT_USAGE:
+        argp_state_help(state, stdout, ARGP_HELP_USAGE | ARGP_HELP_EXIT_OK);
+        break;
+    case 'V':
+        puts(PACKAGE_STRING);
+        exit(EXIT_SUCCESS);
     case 'k':
         a->key_file = arg;
         break;
@@ -86,39 +98,46 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 static const struct argp argp = { options, parse_opt, args_doc, doc, nullptr, nullptr, nullptr };
 
+static bool run(const struct args *a, unsigned char key[KEY_BYTES])
+{
+    if (!key_load(a->key_file, key))
+        return false;
+
+    FILE *in = stdin;
+    const char *in_name = "(standard input)";
+    if (a->input != nullptr && strcmp(a->input, "-") != 0) {
+        in_name = a->input;
+        in = fopen(in_name, "rb");
+        if (in == nullptr) {
+            error(0, errno, "%s", in_name);
+            return false;
+        }
+    }
+
+    bool ok = a->command == CMD_ENCRYPT
+                  ? stream_encrypt(in, in_name, stdout, key)
+                  : stream_decrypt(in, in_name, stdout, key);
+    if (in != stdin)
+        fclose(in);
+    return ok;
+}
+
 int main(int argc, char **argv)
 {
-    /* Prefix diagnostics from error(3) with the bare program name. */
-    set_program_name(last_component(argv[0]));
+    /* argp, getopt and error(3) all name the program after argv[0]. */
+    argv[0] = last_component(argv[0]);
+    set_program_name(argv[0]);
 
     struct args a = {};
-    argp_parse(&argp, argc, argv, 0, nullptr, &a);
+    argp_parse(&argp, argc, argv, ARGP_NO_HELP, nullptr, &a);
 
     if (sodium_init() < 0)
         error(EXIT_FAILURE, 0, "cannot initialise libsodium");
 
     unsigned char key[KEY_BYTES];
-    if (!key_load(a.key_file, key))
-        return EXIT_FAILURE;
-
-    FILE *in = stdin;
-    const char *in_name = "-";
-    if (a.input != nullptr && strcmp(a.input, "-") != 0) {
-        in_name = a.input;
-        in = fopen(in_name, "rb");
-        if (in == nullptr) {
-            sodium_memzero(key, sizeof key);
-            error(EXIT_FAILURE, errno, "%s", in_name);
-        }
-    }
-
-    bool ok = a.command == CMD_ENCRYPT
-                  ? stream_encrypt(in, stdout, key)
-                  : stream_decrypt(in, stdout, key);
+    bool ok = run(&a, key);
     sodium_memzero(key, sizeof key);
 
-    if (in != stdin)
-        fclose(in);
     if (fclose(stdout) != 0 && ok) {
         error(0, errno, "write error");
         ok = false;

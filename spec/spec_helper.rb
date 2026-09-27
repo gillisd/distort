@@ -3,7 +3,6 @@ require "fileutils"
 require "securerandom"
 require "tmpdir"
 
-# Test the distort found on PATH, falling back to the one in ./build.
 ENV["PATH"] = [ENV.fetch("PATH", nil), File.expand_path("../build", __dir__)].compact.join(File::PATH_SEPARATOR)
 unless ENV["PATH"].split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, "distort")) }
   abort "spec: distort not found on PATH or in build/"

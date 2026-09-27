@@ -33,8 +33,8 @@ RSpec.describe "distort --cipher" do
     context "when encrypting with the unsupported cipher #{name}" do
       subject(:result) { encrypt(plaintext, "--cipher=#{name}") }
 
-      it "fails" do
-        expect(result).not_to be_success
+      it "exits with status 64" do
+        expect(result.exitstatus).to eq(64)
       end
 
       it "writes nothing to stdout" do
@@ -49,8 +49,8 @@ RSpec.describe "distort --cipher" do
     context "when decrypting with the unsupported cipher #{name}" do
       subject(:result) { decrypt(ciphertext_of(plaintext), "--cipher=#{name}") }
 
-      it "fails" do
-        expect(result).not_to be_success
+      it "exits with status 64" do
+        expect(result.exitstatus).to eq(64)
       end
 
       it "writes nothing to stdout" do

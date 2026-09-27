@@ -37,11 +37,11 @@ static bool write_all(FILE *out, const void *buf, size_t n)
     return false;
 }
 
-static bool read_failed(FILE *in)
+static bool read_failed(FILE *in, const char *name)
 {
     if (!ferror(in))
         return false;
-    error(0, errno, "read error");
+    error(0, errno, "%s", name);
     return true;
 }
 
@@ -61,7 +61,7 @@ static void wipe(crypto_secretstream_xchacha20poly1305_state *st)
     sodium_memzero(pt, sizeof pt);
 }
 
-bool stream_encrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
+bool stream_encrypt(FILE *in, const char *in_name, FILE *out, const unsigned char key[KEY_BYTES])
 {
     crypto_secretstream_xchacha20poly1305_state st;
     unsigned char header[HEADER_BYTES];
@@ -70,14 +70,14 @@ bool stream_encrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
     crypto_secretstream_xchacha20poly1305_init_push(&st, header, key);
     for (bool final = false, first = true; !final; first = false) {
         size_t n = fread(pt, 1, CHUNK, in);
-        if (read_failed(in))
+        if (read_failed(in, in_name))
             goto done;
         /* Emit nothing until the input has proven readable. */
         if (first && (!write_all(out, PREAMBLE, sizeof PREAMBLE) ||
                       !write_all(out, header, sizeof header)))
             goto done;
         final = n < CHUNK || at_eof(in);
-        if (read_failed(in))
+        if (read_failed(in, in_name))
             goto done;
 
         unsigned long long clen;
@@ -92,7 +92,7 @@ done:
     return ok;
 }
 
-bool stream_decrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
+bool stream_decrypt(FILE *in, const char *in_name, FILE *out, const unsigned char key[KEY_BYTES])
 {
     unsigned char preamble[sizeof PREAMBLE];
     crypto_secretstream_xchacha20poly1305_state st = {};
@@ -100,7 +100,7 @@ bool stream_decrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
     bool ok = false;
 
     size_t n = fread(preamble, 1, sizeof preamble, in);
-    if (read_failed(in))
+    if (read_failed(in, in_name))
         return false;
     if (n < MAGIC_BYTES || memcmp(preamble, PREAMBLE, MAGIC_BYTES) != 0) {
         error(0, 0, "input is not a distort stream");
@@ -115,7 +115,7 @@ bool stream_decrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
         return false;
     }
     if (fread(header, 1, sizeof header, in) != sizeof header) {
-        if (!read_failed(in))
+        if (!read_failed(in, in_name))
             error(0, 0, "unexpected end of input: stream is truncated");
         return false;
     }
@@ -126,14 +126,14 @@ bool stream_decrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
 
     for (bool final = false; !final;) {
         n = fread(ct, 1, sizeof ct, in);
-        if (read_failed(in))
+        if (read_failed(in, in_name))
             goto done;
         if (n < ABYTES) {
             error(0, 0, "unexpected end of input: stream is truncated");
             goto done;
         }
         final = n < sizeof ct || at_eof(in);
-        if (read_failed(in))
+        if (read_failed(in, in_name))
             goto done;
 
         unsigned long long plen;
@@ -145,7 +145,7 @@ bool stream_decrypt(FILE *in, FILE *out, const unsigned char key[KEY_BYTES])
         }
         if ((tag == TAG_FINAL) != final) {
             error(0, 0, final ? "unexpected end of input: stream is truncated"
-                              : "unexpected data after end of stream");
+                              : "unexpected data after the end of the stream");
             goto done;
         }
         if (!write_all(out, pt, (size_t)plen))

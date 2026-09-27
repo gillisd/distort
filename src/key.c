@@ -29,8 +29,8 @@ bool key_load(const char *path, unsigned char key[KEY_BYTES])
         memcpy(key, buf, KEY_BYTES);
     } else {
         size_t len = n;
-        while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
-            len--;
+        if (len > 0 && buf[len - 1] == '\n')
+            len -= len > 1 && buf[len - 2] == '\r' ? 2 : 1;
         size_t bin_len = 0;
         ok = len == 2 * KEY_BYTES &&
              sodium_hex2bin(key, KEY_BYTES, (const char *)buf, len, nullptr, &bin_len, nullptr) == 0 &&
