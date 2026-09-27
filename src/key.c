@@ -13,6 +13,7 @@ bool key_load(const char *path, unsigned char key[KEY_BYTES])
         error(0, errno, "%s", path);
         return false;
     }
+    setvbuf(f, nullptr, _IONBF, 0); /* keep no copy of the key in a stdio buffer */
 
     unsigned char buf[2 * KEY_BYTES + 3]; /* one byte more than any valid file */
     size_t n = fread(buf, 1, sizeof buf, f);
@@ -31,10 +32,8 @@ bool key_load(const char *path, unsigned char key[KEY_BYTES])
         size_t len = n;
         if (len > 0 && buf[len - 1] == '\n')
             len -= len > 1 && buf[len - 2] == '\r' ? 2 : 1;
-        size_t bin_len = 0;
         ok = len == 2 * KEY_BYTES &&
-             sodium_hex2bin(key, KEY_BYTES, (const char *)buf, len, nullptr, &bin_len, nullptr) == 0 &&
-             bin_len == KEY_BYTES;
+             sodium_hex2bin(key, KEY_BYTES, (const char *)buf, len, nullptr, nullptr, nullptr) == 0;
     }
     sodium_memzero(buf, sizeof buf);
     if (!ok)

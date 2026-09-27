@@ -1,5 +1,5 @@
 RSpec.describe "distort when stdout cannot be written", :dev_full do
-  let(:geometry) { stream_geometry("chacha20-poly1305") }
+  let(:geometry) { stream_geometry }
 
   {
     "a small input" => ->(_geometry) { "attack at dawn\n" },
@@ -22,10 +22,24 @@ RSpec.describe "distort when stdout cannot be written", :dev_full do
             expect(result.exitstatus).to eq(1)
           end
 
-          it "explains the problem on stderr" do
-            expect(result.stderr).not_to be_empty
+          it "reports the write error once on stderr" do
+            expect(result.stderr).to match(/\Adistort: write error: .+\n\z/)
           end
         end
+      end
+    end
+  end
+
+  %w[--help --usage --version].each do |option|
+    describe option do
+      subject(:result) { capture(*redirect(["distort", option], ">", "/dev/full")) }
+
+      it "exits with status 1" do
+        expect(result.exitstatus).to eq(1)
+      end
+
+      it "reports the write error on stderr" do
+        expect(result.stderr).to match(/\Adistort: write error: .+\n\z/)
       end
     end
   end

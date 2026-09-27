@@ -44,6 +44,13 @@ decrypt writes each chunk only after verifying it.  If it fails, the output
 so far is authentic but incomplete: trust the data only when the exit
 status is 0.  See distort --help and man distort.
 
+License
+=======
+
+distort is released under the MIT license; see COPYING.  The gnulib files
+bundled in lib/ and m4/ keep their own licenses (LGPL, or more permissive).
+Statically linked binaries also include libsodium, under the ISC license.
+
 Reporting bugs
 ==============
 

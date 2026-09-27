@@ -10,8 +10,12 @@ RSpec.describe "distort help and usage" do
       expect(result.stdout).to match(/^Usage: distort/)
     end
 
-    it "shows the usage of both commands" do
-      expect(result.stdout).to match(/^Usage: distort .*encrypt \[FILE\]\n\s+or: +distort .*decrypt \[FILE\]$/)
+    it "shows the usage of both commands with -k FILE required" do
+      expect(result.stdout).to match(/^Usage: distort \[OPTION\.\.\.\] -k FILE encrypt \[FILE\]\n\s+or: +distort \[OPTION\.\.\.\] -k FILE decrypt \[FILE\]$/)
+    end
+
+    it "never shows -k FILE as optional" do
+      expect(result.stdout).not_to include("[-k FILE]")
     end
 
     it "writes nothing to stderr" do
@@ -57,6 +61,30 @@ RSpec.describe "distort help and usage" do
     end
   end
 
+  describe "--usage" do
+    subject(:result) { distort("--usage") }
+
+    it "exits with status 0" do
+      expect(result.exitstatus).to eq(0)
+    end
+
+    it "shows -k FILE as required for encrypt" do
+      expect(result.stdout).to match(/^Usage: distort .*\s-k FILE encrypt \[FILE\]$/m)
+    end
+
+    it "shows -k FILE as required for decrypt" do
+      expect(result.stdout).to match(/^\s+or: +distort .*\s-k FILE decrypt \[FILE\]$/)
+    end
+
+    it "never shows -k FILE as optional" do
+      expect(result.stdout).not_to include("[-k FILE]")
+    end
+
+    it "writes nothing to stderr" do
+      expect(result.stderr).to be_empty
+    end
+  end
+
   describe "--version" do
     subject(:result) { distort("--version") }
 
@@ -64,8 +92,20 @@ RSpec.describe "distort help and usage" do
       expect(result.exitstatus).to eq(0)
     end
 
-    it "prints the program name" do
-      expect(result.stdout).to start_with("distort")
+    it "prints the program name and version first" do
+      expect(result.stdout).to match(/\Adistort \d+\.\d+\.\d+\n/)
+    end
+
+    it "shows the copyright" do
+      expect(result.stdout).to match(/^Copyright \(c\) 2026 David Gillis$/)
+    end
+
+    it "shows the license" do
+      expect(result.stdout).to match(%r{^License: MIT <https://opensource\.org/licenses/MIT>$})
+    end
+
+    it "writes nothing to stderr" do
+      expect(result.stderr).to be_empty
     end
   end
 

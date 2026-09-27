@@ -1,6 +1,5 @@
 module DistortHelpers
   KEY_BYTES = 32
-  CIPHERS = %w[chacha20-poly1305].freeze
 
   def distort(*args, stdin: "".b)
     capture("distort", *args, stdin:)
@@ -53,14 +52,12 @@ module DistortHelpers
     Digest::SHA256.hexdigest(bytes)
   end
 
-  def stream_geometry(cipher)
-    DistortHelpers.geometries[cipher] ||= StreamGeometry.discover do |size|
-      ciphertext_of("\0".b * size, "--cipher=#{cipher}").bytesize - size
-    end
+  def stream_geometry
+    DistortHelpers.geometry { |size| ciphertext_of("\0".b * size).bytesize - size }
   end
 
-  def self.geometries
-    @geometries ||= {}
+  def self.geometry(&expansion)
+    @geometry ||= StreamGeometry.discover(&expansion)
   end
 
   def flip_byte(bytes, index)

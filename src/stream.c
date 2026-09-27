@@ -29,12 +29,10 @@ constexpr unsigned char TAG_FINAL = crypto_secretstream_xchacha20poly1305_TAG_FI
 static unsigned char pt[CHUNK];
 static unsigned char ct[CHUNK + ABYTES];
 
+/* A failed write is reported when stdout is closed at exit. */
 static bool write_all(FILE *out, const void *buf, size_t n)
 {
-    if (fwrite(buf, 1, n, out) == n)
-        return true;
-    error(0, errno, "write error");
-    return false;
+    return fwrite(buf, 1, n, out) == n;
 }
 
 static bool read_failed(FILE *in, const char *name)

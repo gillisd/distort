@@ -8,10 +8,13 @@
 #include <unistd.h>
 
 #include "basename-lgpl.h"
-#include "progname.h"
 
 #include "distort.h"
 
+const char *argp_program_version =
+    PACKAGE_STRING "\n"
+    "Copyright (c) 2026 David Gillis\n"
+    "License: MIT <https://opensource.org/licenses/MIT>";
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 static const char doc[] =
@@ -28,12 +31,12 @@ static const char doc[] =
     "\n"
     "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on misuse.";
 
-static const char args_doc[] = "encrypt [FILE]\ndecrypt [FILE]";
+static const char args_doc[] = "-k FILE encrypt [FILE]\n-k FILE decrypt [FILE]";
 
 enum { OPT_USAGE = 256 };
 
 static const struct argp_option options[] = {
-    { "key-file", 'k', "FILE", 0, "key to use, 32 bytes raw or hex; required", 0 },
+    { "key-file", 'k', "FILE", OPTION_NO_USAGE, "key to use, 32 bytes raw or hex; required", 0 },
     { "cipher", 'c', "NAME", 0, "cipher to use; chacha20-poly1305 is the only one", 0 },
     { "help", 'h', nullptr, 0, "give this help list", -1 },
     { "usage", OPT_USAGE, nullptr, 0, "give a short usage message", -1 },
@@ -61,7 +64,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         argp_state_help(state, stdout, ARGP_HELP_USAGE | ARGP_HELP_EXIT_OK);
         break;
     case 'V':
-        puts(PACKAGE_STRING);
+        puts(argp_program_version);
         exit(EXIT_SUCCESS);
     case 'k':
         a->key_file = arg;
@@ -123,11 +126,28 @@ static bool run(const struct args *a, unsigned char key[KEY_BYTES])
     return ok;
 }
 
+static void print_program_name(void)
+{
+    fprintf(stderr, "%s: ", getprogname());
+}
+
+/* Flush and close stdout at exit, so that no write error goes unreported. */
+static void close_stdout(void)
+{
+    bool failed = ferror(stdout) != 0;
+    if (fclose(stdout) != 0 || failed) {
+        if (errno != EPIPE)
+            error(0, errno, "write error");
+        _exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char **argv)
 {
-    /* argp, getopt and error(3) all name the program after argv[0]. */
+    /* Name the program without its directory: argp and getopt use argv[0]. */
     argv[0] = last_component(argv[0]);
-    set_program_name(argv[0]);
+    error_print_progname = print_program_name;
+    atexit(close_stdout);
 
     struct args a = {};
     argp_parse(&argp, argc, argv, ARGP_NO_HELP, nullptr, &a);
@@ -144,10 +164,5 @@ int main(int argc, char **argv)
     unsigned char key[KEY_BYTES];
     bool ok = run(&a, key);
     sodium_memzero(key, sizeof key);
-
-    if (fclose(stdout) != 0 && ok) {
-        error(0, errno, "write error");
-        ok = false;
-    }
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
