@@ -1,6 +1,7 @@
 require "digest"
 require "fileutils"
 require "securerandom"
+require "shellwords"
 require "tmpdir"
 
 ENV["PATH"] = [ENV.fetch("PATH", nil), File.expand_path("../build", __dir__)].compact.join(File::PATH_SEPARATOR)
@@ -29,6 +30,10 @@ RSpec.configure do |config|
 
   config.before(:example, :dev_full) do
     skip "/dev/full is not available on this platform" unless File.exist?("/dev/full")
+  end
+
+  config.before(:example, :terminal) do
+    skip "util-linux script is not available on this platform" unless capture("sh", "-c", "script -qec true /dev/null").success?
   end
 
   config.include Shell

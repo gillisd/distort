@@ -5,6 +5,7 @@
 #include <error.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "basename-lgpl.h"
 #include "progname.h"
@@ -32,7 +33,7 @@ static const char args_doc[] = "encrypt [FILE]\ndecrypt [FILE]";
 enum { OPT_USAGE = 256 };
 
 static const struct argp_option options[] = {
-    { "key-file", 'k', "FILE", 0, "read the 32-byte key (raw or hex) from FILE", 0 },
+    { "key-file", 'k', "FILE", 0, "key to use, 32 bytes raw or hex; required", 0 },
     { "cipher", 'c', "NAME", 0, "cipher to use; chacha20-poly1305 is the only one", 0 },
     { "help", 'h', nullptr, 0, "give this help list", -1 },
     { "usage", OPT_USAGE, nullptr, 0, "give a short usage message", -1 },
@@ -130,6 +131,12 @@ int main(int argc, char **argv)
 
     struct args a = {};
     argp_parse(&argp, argc, argv, ARGP_NO_HELP, nullptr, &a);
+
+    if (a.command == CMD_ENCRYPT && isatty(STDOUT_FILENO))
+        error(EXIT_FAILURE, 0, "refusing to write encrypted data to a terminal");
+    if (a.command == CMD_DECRYPT && (a.input == nullptr || strcmp(a.input, "-") == 0)
+        && isatty(STDIN_FILENO))
+        error(EXIT_FAILURE, 0, "refusing to read encrypted data from a terminal");
 
     if (sodium_init() < 0)
         error(EXIT_FAILURE, 0, "cannot initialise libsodium");

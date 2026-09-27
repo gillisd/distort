@@ -24,6 +24,10 @@ RSpec.describe "distort help and usage" do
       end
     end
 
+    it "marks --key-file as required" do
+      expect(result.stdout).to match(/^\s+-k, --key-file=FILE\s.*\brequired$/)
+    end
+
     it "documents -h alongside --help" do
       expect(result.stdout).to match(/^\s+-h, --help\s/)
     end

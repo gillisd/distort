@@ -29,6 +29,10 @@ module DistortHelpers
     run(*argv) { |session| session.outcome(limit: 1024 * 1024, within: 5) }
   end
 
+  def on_terminal(*command, redirects:)
+    capture("script", "-qec", "#{command.shelljoin} #{redirects}", "/dev/null")
+  end
+
   def redirect(command, operator, path)
     ["sh", "-c", %(exec "$@" #{operator} "$0"), path, *command]
   end
