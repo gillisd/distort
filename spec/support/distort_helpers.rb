@@ -40,6 +40,12 @@ module DistortHelpers
     ["sh", "-c", 'exec "$@" >&-', "sh", *command]
   end
 
+  def into_closed_reader_ignoring_sigpipe(command)
+    script = 'trap "" PIPE; exec 3>&1; ' \
+             '{ while printf x 2>/dev/null; do :; done; "$@" 3>&-; echo "$?" >&3; } | head -c1 >/dev/null 3>&-'
+    ["sh", "-c", script, "sh", *command]
+  end
+
   def ciphertext_of(plaintext, *options, key: key_path)
     encrypt(plaintext, *options, key:).stdout
   end
