@@ -36,6 +36,10 @@ module DistortHelpers
     ["sh", "-c", %(exec "$@" #{operator} "$0"), path, *command]
   end
 
+  def with_stdout_closed(command)
+    ["sh", "-c", 'exec "$@" >&-', "sh", *command]
+  end
+
   def ciphertext_of(plaintext, *options, key: key_path)
     encrypt(plaintext, *options, key:).stdout
   end

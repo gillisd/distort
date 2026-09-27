@@ -3,7 +3,7 @@ distort \- encrypt or decrypt a stream with authenticated encryption
 
 [>DESCRIPTION]
 .PP
-The stream is sealed with chacha20\-poly1305 (libsodium's secretstream)
+The stream is sealed with xchacha20\-poly1305 (libsodium's secretstream)
 in 64 KiB chunks, so memory use is constant.
 Every chunk is authenticated.
 .B decrypt

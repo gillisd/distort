@@ -1,5 +1,5 @@
 RSpec.describe "distort round trips" do
-  cipher_options = { "the default cipher" => [], "chacha20-poly1305" => ["--cipher=chacha20-poly1305"] }.freeze
+  cipher_options = { "the default cipher" => [], "xchacha20-poly1305" => ["--cipher=xchacha20-poly1305"] }.freeze
   sizes = [0, 1, 15, 16, 17, 4095, 4096, 4097, 16_383, 16_384, 16_385, 65_535, 65_536, 65_537,
            (1024 * 1024) + 3].freeze
 

@@ -37,8 +37,8 @@ RSpec.describe "distort input sources" do
   context "when options follow the file name" do
     it "still honours them" do
       path = write_file("bigfile.bin", plaintext)
-      ciphertext = distort("encrypt", path, "--cipher=chacha20-poly1305", "--key-file=#{key_path}").stdout
-      expect(sha256(decrypt(ciphertext, "--cipher=chacha20-poly1305").stdout)).to eq(digest)
+      ciphertext = distort("encrypt", path, "--cipher=xchacha20-poly1305", "--key-file=#{key_path}").stdout
+      expect(sha256(decrypt(ciphertext, "--cipher=xchacha20-poly1305").stdout)).to eq(digest)
     end
   end
 

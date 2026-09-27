@@ -29,7 +29,7 @@ static const char doc[] =
     "\n"
     "Make a key:  head -c 32 /dev/urandom > key.key\n"
     "\n"
-    "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on misuse.";
+    "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on a usage error.";
 
 static const char args_doc[] = "-k FILE {encrypt|decrypt} [FILE]";
 
@@ -37,7 +37,7 @@ enum { OPT_USAGE = 256 };
 
 static const struct argp_option options[] = {
     { "key-file", 'k', "FILE", OPTION_NO_USAGE, "read the 32-byte key from FILE; required", 0 },
-    { "cipher", 'c', "NAME", 0, "cipher to use; chacha20-poly1305 is the only one", 0 },
+    { "cipher", 'c', "NAME", 0, "cipher to use; xchacha20-poly1305 is the only one", 0 },
     { "help", 'h', nullptr, 0, "give this help list", -1 },
     { "usage", OPT_USAGE, nullptr, 0, "give a short usage message", -1 },
     { "version", 'V', nullptr, 0, "print program version", -1 },
@@ -70,8 +70,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         a->key_file = arg;
         break;
     case 'c':
-        if (strcmp(arg, "chacha20-poly1305") != 0)
-            argp_error(state, "invalid cipher '%s' (expected chacha20-poly1305)", arg);
+        if (strcmp(arg, "xchacha20-poly1305") != 0)
+            argp_error(state, "invalid cipher '%s' (expected xchacha20-poly1305)", arg);
         break;
     case ARGP_KEY_ARG:
         if (state->arg_num == 0) {
@@ -132,8 +132,8 @@ static void print_program_name(void)
 }
 
 /* Flush and close stdout at exit, so that no write error goes unreported.
-   An error is reported with errno 0 (just "write error") when the stream
-   failed earlier and the final flush set no errno of its own.  */
+   As with gnulib's close_stdout, a stdout that was closed from the start is
+   no error when there was nothing to write to it.  */
 static void close_stdout(void)
 {
     bool flush_failed = fflush(stdout) != 0;
@@ -143,7 +143,7 @@ static void close_stdout(void)
             error(0, err, "write error");
         _exit(EXIT_FAILURE);
     }
-    if (fclose(stdout) != 0) {
+    if (fclose(stdout) != 0 && errno != EBADF) {
         /* stdout is gone, so error(), which flushes it first, cannot be used. */
         if (errno != EPIPE)
             fprintf(stderr, "%s: write error: %s\n", getprogname(), strerror(errno));
@@ -157,6 +157,10 @@ int main(int argc, char **argv)
     argv[0] = last_component(argv[0]);
     error_print_progname = print_program_name;
     atexit(close_stdout);
+    /* Buffer stdout fully unless it is a terminal, as glibc does, so that a
+       write error surfaces when stdout is flushed, with its errno.  */
+    if (!isatty(STDOUT_FILENO))
+        setvbuf(stdout, nullptr, _IOFBF, BUFSIZ);
 
     struct args a = {};
     argp_parse(&argp, argc, argv, ARGP_NO_HELP, nullptr, &a);

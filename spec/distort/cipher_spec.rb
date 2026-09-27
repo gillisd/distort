@@ -2,16 +2,16 @@ RSpec.describe "distort --cipher" do
   let(:plaintext) { "the quick brown fox jumps over the lazy dog\n" * 10 }
 
   context "when no cipher is chosen" do
-    it "encrypts with chacha20-poly1305" do
-      expect(decrypt(ciphertext_of(plaintext), "--cipher=chacha20-poly1305").stdout).to eq(plaintext)
+    it "encrypts with xchacha20-poly1305" do
+      expect(decrypt(ciphertext_of(plaintext), "--cipher=xchacha20-poly1305").stdout).to eq(plaintext)
     end
   end
 
-  context "when chacha20-poly1305 is chosen" do
-    let(:ciphertext) { ciphertext_of(plaintext, "--cipher=chacha20-poly1305") }
+  context "when xchacha20-poly1305 is chosen" do
+    let(:ciphertext) { ciphertext_of(plaintext, "--cipher=xchacha20-poly1305") }
 
     it "decrypts when the same cipher is named" do
-      expect(decrypt(ciphertext, "--cipher=chacha20-poly1305").stdout).to eq(plaintext)
+      expect(decrypt(ciphertext, "--cipher=xchacha20-poly1305").stdout).to eq(plaintext)
     end
 
     it "decrypts without naming the cipher" do
@@ -21,15 +21,15 @@ RSpec.describe "distort --cipher" do
 
   context "when the cipher is given as a separate argument" do
     it "is accepted by encrypt" do
-      expect(encrypt(plaintext, "--cipher", "chacha20-poly1305")).to be_success
+      expect(encrypt(plaintext, "--cipher", "xchacha20-poly1305")).to be_success
     end
 
     it "is accepted by decrypt" do
-      expect(decrypt(ciphertext_of(plaintext), "--cipher", "chacha20-poly1305").stdout).to eq(plaintext)
+      expect(decrypt(ciphertext_of(plaintext), "--cipher", "xchacha20-poly1305").stdout).to eq(plaintext)
     end
   end
 
-  %w[chacha20 xchacha20-poly1305 xsalsa20-poly1305 aegis256 blowfish des].each do |name|
+  %w[chacha20 chacha20-poly1305 xsalsa20-poly1305 aegis256 blowfish des].each do |name|
     context "when encrypting with the unsupported cipher #{name}" do
       subject(:result) { encrypt(plaintext, "--cipher=#{name}") }
 

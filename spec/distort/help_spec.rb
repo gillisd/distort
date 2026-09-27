@@ -26,7 +26,7 @@ RSpec.describe "distort help and usage" do
       expect(result.stderr).to be_empty
     end
 
-    %w[encrypt decrypt --key-file --cipher chacha20-poly1305].each do |term|
+    %w[encrypt decrypt --key-file --cipher xchacha20-poly1305].each do |term|
       it "documents #{term}" do
         expect(result.stdout).to include(term)
       end
@@ -49,7 +49,7 @@ RSpec.describe "distort help and usage" do
     end
 
     it "documents the exit status" do
-      expect(result.stdout).to match(/exit status.*\b0\b.*\b1\b.*\b64\b/im)
+      expect(result.stdout).to match(/^Exit status: 0 on success, 1 on failure or a damaged stream,\s+64 on a\s+usage\s+error\.$/)
     end
   end
 

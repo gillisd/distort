@@ -22,15 +22,15 @@ RSpec.describe "distort when stdout cannot be written", :dev_full do
             expect(result.exitstatus).to eq(1)
           end
 
-          it "reports the write error once on stderr" do
-            expect(result.stderr).to match(/\Adistort: write error: .+\n\z/)
+          it "reports the write error once on stderr, with its reason" do
+            expect(result.stderr).to eq("distort: write error: No space left on device\n")
           end
         end
       end
     end
   end
 
-  %w[--help --usage --version].each do |option|
+  %w[--help -h --usage --version -V].each do |option|
     describe option do
       subject(:result) { capture(*redirect(["distort", option], ">", "/dev/full")) }
 
@@ -38,8 +38,8 @@ RSpec.describe "distort when stdout cannot be written", :dev_full do
         expect(result.exitstatus).to eq(1)
       end
 
-      it "reports the write error on stderr" do
-        expect(result.stderr).to match(/\Adistort: write error: .+\n\z/)
+      it "reports the write error on stderr, with its reason" do
+        expect(result.stderr).to eq("distort: write error: No space left on device\n")
       end
     end
   end

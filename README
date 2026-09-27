@@ -1,6 +1,6 @@
 distort — encrypt or decrypt a stream with authenticated encryption
 
-distort seals a stream of any length with chacha20-poly1305 (libsodium's
+distort seals a stream of any length with xchacha20-poly1305 (libsodium's
 secretstream) in 64 KiB chunks, so memory use is constant.  Every chunk is
 authenticated: decryption fails if the stream was reordered, truncated,
 extended or sealed with another key.
@@ -43,6 +43,9 @@ Encrypt and decrypt files or pipes:
 decrypt writes each chunk only after verifying it.  If it fails, the output
 so far is authentic but incomplete: trust the data only when the exit
 status is 0.  See distort --help and man distort.
+
+Exit status: 0 on success, 1 on failure or a damaged stream, 64 on a usage
+error.
 
 License
 =======

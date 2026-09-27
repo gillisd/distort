@@ -41,6 +41,8 @@ module Shell
       writer = Thread.new do
         pieces.each { |piece| @stdin.write(piece.tap { sent << piece }) }
         @stdin.close
+      rescue Errno::EPIPE, IOError
+        nil
       end
       received = Digest::SHA256.new
       loop { received << @stdout.readpartial(CHUNK) }
