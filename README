@@ -1,0 +1,47 @@
+distort — encrypt or decrypt a stream with authenticated encryption
+
+distort seals a stream of any length with XChaCha20-Poly1305 (libsodium's
+crypto_secretstream) in 64 KiB chunks, so memory use is constant.  Every
+chunk is authenticated: decryption fails if the stream was reordered,
+truncated, extended or sealed with another key.
+
+Building and installing
+=======================
+
+distort needs a C compiler and libsodium (Alpine: libsodium-dev;
+Debian: libsodium-dev; Fedora: libsodium-devel; macOS: brew install libsodium).
+From a release tarball:
+
+    ./configure
+    make
+    make check          # optional
+    sudo make install
+
+For a self-contained binary: ./configure --enable-static-binary (fully static on Linux; libsodium linked in statically on macOS).
+
+From a source checkout, run ./bootstrap first (needs autoconf, automake,
+help2man and git).  See ./configure --help for the usual options such as
+--prefix.
+
+Usage
+=====
+
+Make a key: 32 random bytes, stored raw (or as 64 hex digits).
+
+    head -c 32 /dev/urandom > key.key
+    chmod 600 key.key
+
+Encrypt and decrypt files or pipes:
+
+    distort encrypt --key-file key.key file.bin > file.bin.enc
+    distort decrypt --key-file key.key file.bin.enc > file.bin
+    tar cz dir | distort encrypt -k key.key > dir.tgz.enc
+
+decrypt writes each chunk only after verifying it.  If it fails, the output
+so far is authentic but incomplete: trust the data only when the exit
+status is 0.  See distort --help and man distort.
+
+Reporting bugs
+==============
+
+Send bug reports to david@flipmine.com.
