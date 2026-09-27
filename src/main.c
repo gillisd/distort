@@ -14,7 +14,6 @@
 const char *argp_program_version =
     PACKAGE_STRING "\n"
     "Copyright (c) 2026 David Gillis\n"
-    "\n"
     "License: MIT <https://opensource.org/licenses/MIT>";
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 

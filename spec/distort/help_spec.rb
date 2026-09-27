@@ -112,8 +112,8 @@ RSpec.describe "distort help and usage" do
       expect(result.stdout).to match(%r{^License: MIT <https://opensource\.org/licenses/MIT>$})
     end
 
-    it "separates the copyright from the license with a blank line" do
-      expect(result.stdout).to match(/^Copyright .*\n\nLicense: /)
+    it "prints the license on the line after the copyright" do
+      expect(result.stdout).to match(/^Copyright .*\nLicense: /)
     end
 
     it "writes nothing to stderr" do
