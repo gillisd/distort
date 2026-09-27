@@ -10,8 +10,12 @@ RSpec.describe "distort help and usage" do
       expect(result.stdout).to match(/^Usage: distort/)
     end
 
-    it "shows the usage of both commands with -k FILE required" do
-      expect(result.stdout).to match(/^Usage: distort \[OPTION\.\.\.\] -k FILE encrypt \[FILE\]\n\s+or: +distort \[OPTION\.\.\.\] -k FILE decrypt \[FILE\]$/)
+    it "shows both commands on one usage line with -k FILE required" do
+      expect(result.stdout).to start_with("Usage: distort [OPTION...] -k FILE {encrypt|decrypt} [FILE]\n")
+    end
+
+    it "shows no alternative usage lines" do
+      expect(result.stdout).not_to match(/^\s+or: /)
     end
 
     it "never shows -k FILE as optional" do
@@ -26,6 +30,10 @@ RSpec.describe "distort help and usage" do
       it "documents #{term}" do
         expect(result.stdout).to include(term)
       end
+    end
+
+    it "describes the key as 32 bytes" do
+      expect(result.stdout).to match(/^\s+-k, --key-file=FILE\s.*\b32-byte key\b/)
     end
 
     it "marks --key-file as required" do
@@ -68,12 +76,12 @@ RSpec.describe "distort help and usage" do
       expect(result.exitstatus).to eq(0)
     end
 
-    it "shows -k FILE as required for encrypt" do
-      expect(result.stdout).to match(/^Usage: distort .*\s-k FILE encrypt \[FILE\]$/m)
+    it "ends the usage with -k FILE required before either command" do
+      expect(result.stdout).to match(/^Usage: distort .*\s-k FILE \{encrypt\|decrypt\} \[FILE\]\n\z/m)
     end
 
-    it "shows -k FILE as required for decrypt" do
-      expect(result.stdout).to match(/^\s+or: +distort .*\s-k FILE decrypt \[FILE\]$/)
+    it "shows no alternative usage lines" do
+      expect(result.stdout).not_to match(/^\s+or: /)
     end
 
     it "never shows -k FILE as optional" do
@@ -102,6 +110,10 @@ RSpec.describe "distort help and usage" do
 
     it "shows the license" do
       expect(result.stdout).to match(%r{^License: MIT <https://opensource\.org/licenses/MIT>$})
+    end
+
+    it "separates the copyright from the license with a blank line" do
+      expect(result.stdout).to match(/^Copyright .*\n\nLicense: /)
     end
 
     it "writes nothing to stderr" do

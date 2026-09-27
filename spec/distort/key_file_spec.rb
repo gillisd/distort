@@ -49,8 +49,8 @@ RSpec.describe "distort --key-file" do
             expect(result.stdout).to be_empty
           end
 
-          it "explains the problem on stderr" do
-            expect(result.stderr).not_to be_empty
+          it "reports that the key must be 32 bytes" do
+            expect(result.stderr).to eq("distort: #{File.join(workdir, 'bad.key')}: invalid key: expected 32 bytes\n")
           end
         end
       end
@@ -64,72 +64,47 @@ RSpec.describe "distort --key-file" do
     end
   end
 
-  context "when the key is written as 64 hex digits" do
-    let(:raw_key) { random_bytes(DistortHelpers::KEY_BYTES) }
-    let(:raw_key_path) { write_file("raw.key", raw_key) }
-    let(:hex) { raw_key.unpack1("H*") }
+  context "when the key file holds 64 hex digits as text" do
+    subject(:result) { encrypt(plaintext, key: hex_key_path) }
 
-    {
-      "without a line ending" => "",
-      "with a trailing newline" => "\n",
-      "with a trailing CRLF" => "\r\n"
-    }.each do |description, ending|
-      context description do
-        let(:hex_key_path) { write_file("hex.key", hex + ending) }
+    let(:hex_key_path) { write_file("hex.key", random_bytes(DistortHelpers::KEY_BYTES).unpack1("H*")) }
 
-        it "encrypts to a stream that the same key in raw form decrypts" do
-          ciphertext = ciphertext_of(plaintext, key: hex_key_path)
-          expect(decrypt(ciphertext, key: raw_key_path).stdout).to eq(plaintext)
-        end
-
-        it "decrypts a stream that the same key in raw form encrypted" do
-          ciphertext = ciphertext_of(plaintext, key: raw_key_path)
-          expect(decrypt(ciphertext, key: hex_key_path).stdout).to eq(plaintext)
-        end
-      end
+    it "exits with status 1" do
+      expect(result.exitstatus).to eq(1)
     end
 
-    context "with upper-case digits" do
-      it "decrypts a stream that the same key in raw form encrypted" do
-        ciphertext = ciphertext_of(plaintext, key: raw_key_path)
-        expect(decrypt(ciphertext, key: write_file("hex.key", "#{hex.upcase}\n")).stdout).to eq(plaintext)
-      end
+    it "writes nothing to stdout" do
+      expect(result.stdout).to be_empty
     end
 
-    {
-      "two newlines" => "\n\n",
-      "three newlines" => "\n\n\n",
-      "a bare carriage return" => "\r",
-      "two CRLFs" => "\r\n\r\n",
-      "a trailing space" => " \n"
-    }.each do |description, ending|
-      context "when followed by #{description}" do
-        subject(:result) { encrypt(plaintext, key: write_file("hex.key", hex + ending)) }
+    it "reports that the key must be 32 bytes" do
+      expect(result.stderr).to eq("distort: #{hex_key_path}: invalid key: expected 32 bytes\n")
+    end
+  end
 
-        it "exits with status 1" do
-          expect(result.exitstatus).to eq(1)
-        end
+  context "when the key file holds 32 hex characters as text" do
+    let(:hex_key_path) { write_file("hex.key", random_bytes(DistortHelpers::KEY_BYTES / 2).unpack1("H*")) }
+    let(:raw_key_path) { write_file("raw.key", File.binread(hex_key_path)) }
 
-        it "writes nothing to stdout" do
-          expect(result.stdout).to be_empty
-        end
-
-        it "reports an invalid key" do
-          expect(result.stderr).to match(/invalid key/)
-        end
-      end
+    it "encrypts with the characters themselves as the key" do
+      expect(encrypt(plaintext, key: hex_key_path).exitstatus).to eq(0)
     end
 
-    context "when a digit is not hexadecimal" do
-      subject(:result) { encrypt(plaintext, key: write_file("hex.key", "#{hex[0, 63]}g\n")) }
+    it "encrypts to a stream that the same 32 bytes decrypt" do
+      ciphertext = ciphertext_of(plaintext, key: hex_key_path)
+      expect(decrypt(ciphertext, key: raw_key_path).stdout).to eq(plaintext)
+    end
+  end
 
-      it "exits with status 1" do
-        expect(result.exitstatus).to eq(1)
-      end
+  context "when a 32-byte key is followed by a newline" do
+    subject(:result) { encrypt(plaintext, key: write_file("newline.key", "#{random_bytes(DistortHelpers::KEY_BYTES)}\n")) }
 
-      it "reports an invalid key" do
-        expect(result.stderr).to match(/invalid key/)
-      end
+    it "exits with status 1" do
+      expect(result.exitstatus).to eq(1)
+    end
+
+    it "reports an invalid key" do
+      expect(result.stderr).to match(/invalid key: expected 32 bytes$/)
     end
   end
 

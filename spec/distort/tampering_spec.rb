@@ -18,6 +18,18 @@ RSpec.describe "distort decrypt of untrustworthy input" do
     end
   end
 
+  context "when the format byte is not 1" do
+    subject(:result) { decrypt(ciphertext.dup.tap { |bytes| bytes.setbyte(7, 2) }) }
+
+    it "exits with status 1" do
+      expect(result.exitstatus).to eq(1)
+    end
+
+    it "reports an unsupported format on stderr" do
+      expect(result.stderr).to eq("distort: unsupported stream format version 2\n")
+    end
+  end
+
   context "when the first byte is altered" do
     subject(:result) { decrypt(flip_byte(ciphertext, 0)) }
 

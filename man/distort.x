@@ -29,6 +29,7 @@ Make a key:
 .PP
 .nf
 head \-c 32 /dev/urandom > key.key
+chmod 600 key.key
 .fi
 
 [EXIT STATUS]

@@ -7,7 +7,7 @@
 
 constexpr size_t KEY_BYTES = crypto_secretstream_xchacha20poly1305_KEYBYTES;
 
-/* Load a key from path: 32 raw bytes, or 64 hex digits and at most one line ending. */
+/* Load a key from path, which must hold exactly 32 bytes. */
 [[nodiscard]] bool key_load(const char *path, unsigned char key[KEY_BYTES]);
 
 /* Stream in (named in_name in diagnostics) → out. Returns false on any failure. */

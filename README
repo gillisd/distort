@@ -29,7 +29,7 @@ help2man and git).  See ./configure --help for the usual options such as
 Usage
 =====
 
-Make a key: 32 random bytes, stored raw (or as 64 hex digits).
+Make a key: a file of exactly 32 random bytes.
 
     head -c 32 /dev/urandom > key.key
     chmod 600 key.key

@@ -15,7 +15,7 @@ bool key_load(const char *path, unsigned char key[KEY_BYTES])
     }
     setvbuf(f, nullptr, _IONBF, 0); /* keep no copy of the key in a stdio buffer */
 
-    unsigned char buf[2 * KEY_BYTES + 3]; /* one byte more than any valid file */
+    unsigned char buf[KEY_BYTES + 1]; /* one byte more than a valid file */
     size_t n = fread(buf, 1, sizeof buf, f);
     bool ok = !ferror(f);
     int saved = errno;
@@ -26,17 +26,11 @@ bool key_load(const char *path, unsigned char key[KEY_BYTES])
         return false;
     }
 
-    if (n == KEY_BYTES) {
+    ok = n == KEY_BYTES;
+    if (ok)
         memcpy(key, buf, KEY_BYTES);
-    } else {
-        size_t len = n;
-        if (len > 0 && buf[len - 1] == '\n')
-            len -= len > 1 && buf[len - 2] == '\r' ? 2 : 1;
-        ok = len == 2 * KEY_BYTES &&
-             sodium_hex2bin(key, KEY_BYTES, (const char *)buf, len, nullptr, nullptr, nullptr) == 0;
-    }
     sodium_memzero(buf, sizeof buf);
     if (!ok)
-        error(0, 0, "%s: invalid key: expected 32 raw bytes or 64 hex digits", path);
+        error(0, 0, "%s: invalid key: expected 32 bytes", path);
     return ok;
 }

@@ -14,6 +14,7 @@
 const char *argp_program_version =
     PACKAGE_STRING "\n"
     "Copyright (c) 2026 David Gillis\n"
+    "\n"
     "License: MIT <https://opensource.org/licenses/MIT>";
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
@@ -31,12 +32,12 @@ static const char doc[] =
     "\n"
     "Exit status: 0 on success, 1 on failure or a damaged stream, 64 on misuse.";
 
-static const char args_doc[] = "-k FILE encrypt [FILE]\n-k FILE decrypt [FILE]";
+static const char args_doc[] = "-k FILE {encrypt|decrypt} [FILE]";
 
 enum { OPT_USAGE = 256 };
 
 static const struct argp_option options[] = {
-    { "key-file", 'k', "FILE", OPTION_NO_USAGE, "key to use, 32 bytes raw or hex; required", 0 },
+    { "key-file", 'k', "FILE", OPTION_NO_USAGE, "read the 32-byte key from FILE; required", 0 },
     { "cipher", 'c', "NAME", 0, "cipher to use; chacha20-poly1305 is the only one", 0 },
     { "help", 'h', nullptr, 0, "give this help list", -1 },
     { "usage", OPT_USAGE, nullptr, 0, "give a short usage message", -1 },
@@ -131,13 +132,22 @@ static void print_program_name(void)
     fprintf(stderr, "%s: ", getprogname());
 }
 
-/* Flush and close stdout at exit, so that no write error goes unreported. */
+/* Flush and close stdout at exit, so that no write error goes unreported.
+   An error is reported with errno 0 (just "write error") when the stream
+   failed earlier and the final flush set no errno of its own.  */
 static void close_stdout(void)
 {
-    bool failed = ferror(stdout) != 0;
-    if (fclose(stdout) != 0 || failed) {
+    bool flush_failed = fflush(stdout) != 0;
+    if (flush_failed || ferror(stdout)) {
+        int err = flush_failed ? errno : 0;
+        if (err != EPIPE)
+            error(0, err, "write error");
+        _exit(EXIT_FAILURE);
+    }
+    if (fclose(stdout) != 0) {
+        /* stdout is gone, so error(), which flushes it first, cannot be used. */
         if (errno != EPIPE)
-            error(0, errno, "write error");
+            fprintf(stderr, "%s: write error: %s\n", getprogname(), strerror(errno));
         _exit(EXIT_FAILURE);
     }
 }
