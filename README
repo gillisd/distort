@@ -1,59 +1,112 @@
-distort — encrypt or decrypt a stream with authenticated encryption
+# distort
 
-distort seals a stream of any length with xchacha20-poly1305 (libsodium's
-secretstream) in 64 KiB chunks, so memory use is constant.  Every chunk is
-authenticated: decryption fails if the stream was reordered, truncated,
-extended or sealed with another key.
+🔐 simple, state-of-the-art, symmetric encryption
 
-Building and installing
-=======================
+distort is a minimal cli utility for encrypting/decrypting files & data streams of any size.
 
-distort needs a C compiler, pkg-config and libsodium (Alpine: pkgconf and
-libsodium-dev; Debian: pkg-config and libsodium-dev; Fedora: pkgconf and
-libsodium-devel; macOS: brew install pkg-config libsodium).  From a release
-tarball:
+distort:
 
-    ./configure
-    make
-    make check          # optional
-    sudo make install
+- uses the state-of-the-art streaming cipher, xchaha20-poly1305
+- seals a stream of any size in 64 KiB chunks, so memory use is constant
+- authenticates chunk-by-chunk, failing decryption if stream was reordered, truncated, extended or sealed with another key
+- leans on libsodium's excellent [secretstream](https://libsodium.net/api/LibSodium.CryptoSecretStream.html) for implementation 
+- Is only 300 lines of C, producing a <80KB binary!
 
-For a self-contained binary, run ./configure --enable-static-binary: the
-binary is fully static on Linux (Alpine also needs libsodium-static), and on
-macOS libsodium is linked in statically.
+## Installing
 
-From a source checkout, run ./bootstrap first (needs autoconf, automake,
-help2man and git).  See ./configure --help for the usual options such as
---prefix.
+### normal installation
+distort needs a C compiler, pkg-config and libsodium:
 
-Usage
-=====
+```bash
+brew install pkg-config libsodium
 
-Make a key: a file of exactly 32 random bytes.
+# or if using dnf
+sudo dnf install pkg-config libsodium-devel
 
-    head -c 32 /dev/urandom > key.key
-    chmod 600 key.key
+# or if using apt
+sudo apt install pkg-config libsodium-dev
+```
 
-Encrypt and decrypt files or pipes:
+then run
 
-    distort encrypt -k key.key file.bin > file.bin.enc
-    distort decrypt -k key.key file.bin.enc > file.bin
-    tar cz dir | distort encrypt -k key.key > dir.tgz.enc
+```bash
+./configure
+make
+make check          # optional
+sudo make install
+```
 
-decrypt writes each chunk only after verifying it.  If it fails, the output
-so far is authentic but incomplete: trust the data only when the exit
-status is 0.  See distort --help and man distort.
+### advanced installation
+Produce a self-contained, portable binary:
 
-Exit status is 0 on success, 1 on failure, 64 on a usage error.
+```bash
+./configure --enable-static-binary
+make
 
-License
-=======
+# if running on alpine, you'll also need this before ./configure:
+apk add libsodium-static
+```
+
+From a fresh git clone/checkout: 
+
+```bash
+# ensure you bootstrap before running ./configure
+# (needs autoconf, automake, help2man, and git)
+./bootstrap
+./configure
+...
+```
+
+## Usage
+
+Either:
+
+1. Bring your own 32 byte key
+2. Create one containing exactly 32 high-entropy, random bytes with owner-only access:
+
+```bash
+(umask 177; dd if=/dev/urandom bs=32 count=1 > key.key)
+```
+
+Encrypt files or piped data:
+
+```bash
+# essential usage (file)
+distort encrypt -k key.key file.bin > file.bin.enc
+
+# essential usage (stream)
+cat file.bin | distort encrypt -k key.key > file.bin.enc
+
+# or compose into larger pipeline, encrypting a full dir and uploading to S3
+tar cz sensi \
+  | distort encrypt -k key.key \
+  | aws s3 cp - s3://archives/sensi.tar.zst
+```
+
+Decrypt files or piped data:
+
+```zsh
+# essential usage (file)
+distort decrypt -k key.key file.bin.enc > file.bin
+
+# essential usage (stream)
+cat file.bin.enc | distort decrypt -k key.key > file.bin
+
+# or compose into larger pipeline, streaming file from encrypted s3 archive
+set -o pipefail
+aws s3 s3://archives/sensi.tar.gz.enc - \
+  | distort decrypt -k key.key \
+  | tar -O xz projections.csv \
+  | column -s, -t
+```
+
+## Important
+
+1. You should not trust data produced by `distort decrypt` if the command exited with a non-zero status. This may indicate that one of the segments failed authentication post-decryption.
+2. When using `distort decrypt` (or virtually any decryption cli tool) in a pipeline, ensure you are using `set -o pipefail`. If this is not set, a non-zero exit code caused by failed authentication may not propagate back to your shell, giving you a false sense of security.
+
+## License
 
 distort is released under the MIT license; see COPYING.  The gnulib files
 bundled in lib/ and m4/ keep their own licenses (LGPL, or more permissive).
 Statically linked binaries also include libsodium, under the ISC license.
-
-Reporting bugs
-==============
-
-Send bug reports to david@flipmine.com.
