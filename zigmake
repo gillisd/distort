@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+() {
+  ./bootstrap
+  local host
+  for host in x86_64-linux-musl aarch64-linux-musl; do
+    mkdir -p build-$host
+    (
+      builtin cd -q build-$host \
+        && ../configure --host=$host LDFLAGS=-static CC="zig cc --target=$host" AR="zig ar" RANLIB="zig ranlib" \
+        && make -j$(nproc)
+    )
+  done
+}
