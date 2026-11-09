@@ -28,3 +28,4 @@
 /distort-*.tar.gz
 # RSpec run state
 /spec/examples.txt
+build-aarch64-linux-musl
