@@ -1,0 +1,25 @@
+#compdef distort
+
+local curcontext="$curcontext" context state state_descr line ret=1
+local -a expl
+local -A opt_args
+local -a reply
+local -a cmds=(encrypt decrypt)
+
+_arguments -C '1:command:->command' '*::args:->args' && ret=0
+
+case $state in
+  command)
+    _describe -t commands command cmds && ret=0
+    ;;
+  args)
+    local cmd=$line[1]
+    curcontext="${curcontext%:*}${cmd}:"
+    _arguments \
+      -C \
+      '--key-file=[file containing 32-byte key (required)]: :_files' \
+      '--help[show this help output]' \
+      '--version[show version information]' \
+      && ret=0
+    ;;
+esac
