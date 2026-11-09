@@ -29,3 +29,4 @@
 # RSpec run state
 /spec/examples.txt
 build-aarch64-linux-musl
+build-x86_64-linux-musl
