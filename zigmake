@@ -1,13 +1,54 @@
 #!/usr/bin/env zsh
+# Cross-build distort for linux-musl targets. Each target gets its own
+# prefix holding a libsodium built for it, plus a $host-pkg-config that
+# only sees that prefix; configure finds both on its own.
+#
+#   SODIUM_SRC=/path/to/libsodium ./zigmake
 () {
+  emulate -L zsh -o err_exit -o pipe_fail
+
+  local sodium_src=${SODIUM_SRC:-$PWD/../libsodium}
+  sodium_src=${sodium_src:A}
+  if [[ ! -x $sodium_src/configure ]]; then
+    print -u2 "libsodium source not found at $sodium_src (set SODIUM_SRC)"
+    return 1
+  fi
+
+  local jobs=${$(nproc 2>/dev/null):-$(sysctl -n hw.ncpu)}
+
   ./bootstrap
-  local host
+
+  local host prefix
+  local -a cross
   for host in x86_64-linux-musl aarch64-linux-musl; do
+    prefix=$PWD/deps-$host
+    cross=(--host=$host CC="zig cc --target=$host" AR="zig ar" RANLIB="zig ranlib")
+
+    # 1. libsodium for this target, installed with its libsodium.pc
+    if [[ ! -e $prefix/lib/pkgconfig/libsodium.pc ]]; then
+      mkdir -p build-sodium-$host
+      (
+        builtin cd -q build-sodium-$host
+        $sodium_src/configure $cross --prefix=$prefix --disable-shared --enable-static
+        make -j$jobs install
+      )
+    fi
+
+    # 2. $host-pkg-config, which configure prefers when cross-compiling
+    mkdir -p $prefix/bin
+    print -r -- "#!/bin/sh
+export PKG_CONFIG_LIBDIR='$prefix/lib/pkgconfig'
+export PKG_CONFIG_PATH=
+exec pkg-config \"\$@\"" > $prefix/bin/$host-pkg-config
+    chmod +x $prefix/bin/$host-pkg-config
+
+    # 3. distort: a plain cross configure
     mkdir -p build-$host
     (
-      builtin cd -q build-$host \
-        && ../configure --host=$host LDFLAGS=-static CC="zig cc --target=$host" AR="zig ar" RANLIB="zig ranlib" \
-        && make -j$(nproc)
+      builtin cd -q build-$host
+      path=($prefix/bin $path)
+      ../configure $cross LDFLAGS=-static
+      make -j$jobs
     )
   done
 }
