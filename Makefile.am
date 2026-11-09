@@ -23,3 +23,11 @@ man/distort.1: man/distort.x src/main.c configure.ac | distort$(EXEEXT)
 
 dist_check_SCRIPTS = tests/roundtrip.sh
 TESTS = $(dist_check_SCRIPTS)
+
+# Support for git-version-gen
+$(top_srcdir)/.version: $(top_srcdir)/configure
+	echo '$(VERSION)' > $@-t
+	mv $@-t $@
+
+dist-hook:
+	echo '$(VERSION)' > $(distdir)/.tarball-version
